@@ -1,0 +1,21 @@
+{
+  "status": "success",
+  "timestamp_utc": "2026-09-30T15:55:40.634651+00:00",
+  "timestamp_label": "30 Sep 2026, 22:00 WIB",
+  "layer_file": "public/layers/suhu_20260930_1500.png",
+  "bounds": [
+    [
+      -11.0,
+      95.0
+    ],
+    [
+      6.0,
+      141.0
+    ]
+  ],
+  "stats": {
+    "min_temp": 22.3,
+    "max_temp": 28.7,
+    "avg_temp": 25.7
+  }
+}

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebGIS Cuaca & Atmosfer Indonesia</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            width: 280px;
+        }
+
+        .badge {
+            background: #28a745;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .legend-bar {
+            height: 12px;
+            border-radius: 3px;
+            background: linear-gradient(to right, blue, cyan, yellow, red);
+            margin: 8px 0;
+        }
+
+        .legend-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="map"></div>
+
+    <div class="panel">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 15px;">Suhu Permukaan (2m)</h3>
+            <span class="badge">AUTO-SYNC</span>
+        </div>
+
+        <p style="margin: 10px 0 2px 0; font-size: 11px; color: #666;">WAKTU PEMBARUAN TERAKHIR:</p>
+        <div id="time-label" style="font-size: 14px; font-weight: bold; color: #111;">Memuat...</div>
+
+        <div style="margin-top: 15px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                <span>Legenda Suhu</span>
+                <span id="stat-avg" style="color: #666;">Rata-rata: -</span>
+            </div>
+            <div class="legend-bar"></div>
+            <div class="legend-labels">
+                <span>20°C (Sejuk)</span>
+                <span>28°C</span>
+                <span>36°C (Panas)</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([-2.5, 118.0], 5);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            maxZoom: 18
+        }).addTo(map);
+
+        let currentLayer = null;
+        let activeFile = "";
+
+        async function checkLatestData() {
+            try {
+                // Query param timestamp acak untuk mencegah browser cache
+                const res = await fetch(`public/latest.json?nocache=${new Date().getTime()}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (!data.layer_file || data.layer_file === activeFile) return;
+
+                if (currentLayer) map.removeLayer(currentLayer);
+
+                currentLayer = L.imageOverlay(data.layer_file, data.bounds, {
+                    opacity: 0.8
+                }).addTo(map);
+
+                activeFile = data.layer_file;
+                document.getElementById('time-label').innerText = data.timestamp_label;
+                document.getElementById('stat-avg').innerText = `Rata-rata: ${data.stats.avg_temp}°C`;
+
+            } catch (e) {
+                console.error("Gagal memeriksa update:", e);
+            }
+        }
+
+        // Cek saat pertama kali dibuka & polling setiap 30 detik
+        checkLatestData();
+        setInterval(checkLatestData, 30000);
+    </script>
+</body>
+
+</html>
