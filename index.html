@@ -1,34 +1,41 @@
-<!DOCTYPE html><html lang="id"><head>
-<meta charset="utf-8">
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
-<title>WebGIS Cuaca &amp; Atmosfer Indonesia</title>
-<!-- Tailwind CSS CDN -->
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script>
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>WebGIS Cuaca & Atmosfer Indonesia — Command Center</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
                         brand: {
-                            500: '#38bdf8',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
                             600: '#0284c7',
                         }
                     },
                     fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'Inter', 'Segoe UI', 'sans-serif'],
+                        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
                     }
                 }
             }
         }
     </script>
-<!-- Fonts & Leaflet Icons -->
-<link href="https://fonts.googleapis.com" rel="preconnect">
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
-<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<style>
+
+    <!-- Google Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
@@ -41,451 +48,705 @@
             height: 100%;
             overflow: hidden;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #0b1120;
+            background-color: #060b16;
+            color: #f8fafc;
         }
 
         #map {
             width: 100vw;
             height: 100vh;
             z-index: 1;
-            background: #0b1120;
+            background: radial-gradient(circle at center, #0f172a 0%, #060b16 100%);
         }
 
-        /* High-fidelity glassmorphism card */
+        /* Ambient vignette overlay over map edges */
+        .map-vignette {
+            pointer-events: none;
+            position: fixed;
+            inset: 0;
+            z-index: 400;
+            background: radial-gradient(circle at center, transparent 65%, rgba(6, 11, 22, 0.55) 100%);
+        }
+
+        /* Ultra-modern Glassmorphism */
         .glass-panel {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.65), 0 0 1px 1px rgba(255, 255, 255, 0.08);
+            background: rgba(10, 17, 32, 0.82);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            transition: all 0.25s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(56, 189, 248, 0.25);
         }
 
         .glass-btn {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(30, 41, 59, 0.65);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
         .glass-btn:hover {
-            background: rgba(255, 255, 255, 0.18);
+            background: rgba(56, 189, 248, 0.16);
+            border-color: rgba(56, 189, 248, 0.4);
+            color: #38bdf8;
             transform: translateY(-1px);
         }
+
         .glass-btn:active {
             transform: translateY(0);
         }
 
-        /* Smooth thermal spectrum gradient */
+        .island-pill {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            transition: all 0.2s ease;
+        }
+
+        .island-pill:hover, .island-pill.active {
+            background: rgba(14, 165, 233, 0.2);
+            border-color: rgba(56, 189, 248, 0.55);
+            color: #38bdf8;
+            box-shadow: 0 0 15px -3px rgba(56, 189, 248, 0.35);
+        }
+
+        /* High-precision Thermal Spectrum Gradient */
         .temp-gradient {
-            background: linear-gradient(to right, 
-                #2563eb 0%, 
-                #06b6d4 25%, 
-                #10b981 48%, 
-                #eab308 68%, 
-                #f97316 85%, 
-                #ef4444 100%
+            background: linear-gradient(to right,
+                #1d4ed8 0%,
+                #2563eb 12%,
+                #06b6d4 28%,
+                #10b981 46%,
+                #84cc16 58%,
+                #eab308 70%,
+                #f97316 85%,
+                #ef4444 95%,
+                #b91c1c 100%
             );
         }
 
-        /* Pulsing status radars */
+        /* Radar & Pulse Animations */
         @keyframes pulse-radar {
-            0% { transform: scale(0.9); opacity: 0.8; }
-            50% { transform: scale(1.4); opacity: 0; }
-            100% { transform: scale(0.9); opacity: 0; }
+            0% { transform: scale(0.85); opacity: 0.9; }
+            70% { transform: scale(1.9); opacity: 0; }
+            100% { transform: scale(0.85); opacity: 0; }
         }
         .animate-radar {
-            animation: pulse-radar 2.4s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+            animation: pulse-radar 2.2s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
         }
 
-        /* Custom Scrollbars for mobile pill track & drawer */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
+        /* Custom Range Slider */
+        input[type="range"].custom-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 999px;
+            outline: none;
         }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        input[type="range"].custom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #38bdf8;
+            border: 2px solid #0f172a;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+        input[type="range"].custom-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
         }
 
-        /* Leaflet zoom controls customization */
+        /* Scrollbar hide */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Leaflet Controls Customization */
         .leaflet-bar {
             border: none !important;
-            box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.5) !important;
-            border-radius: 12px !important;
+            box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.65) !important;
+            border-radius: 14px !important;
             overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
         }
         .leaflet-bar a {
-            background-color: rgba(15, 23, 42, 0.9) !important;
+            background-color: rgba(10, 17, 32, 0.88) !important;
             backdrop-filter: blur(12px) !important;
-            color: #f1f5f9 !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-            width: 36px !important;
-            height: 36px !important;
-            line-height: 36px !important;
+            color: #e2e8f0 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+            width: 38px !important;
+            height: 38px !important;
+            line-height: 38px !important;
             transition: all 0.2s;
         }
         .leaflet-bar a:hover {
-            background-color: rgba(30, 41, 59, 1) !important;
+            background-color: rgba(30, 41, 59, 0.95) !important;
             color: #38bdf8 !important;
         }
         .leaflet-container .leaflet-control-attribution {
-            background: rgba(15, 23, 42, 0.85) !important;
-            backdrop-filter: blur(10px);
-            color: #94a3b8 !important;
+            background: rgba(10, 17, 32, 0.75) !important;
+            backdrop-filter: blur(8px);
+            color: #64748b !important;
             font-size: 10px;
-            padding: 4px 10px;
-            border-top-left-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.08);
+            padding: 3px 10px;
+            border-top-left-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
         }
         .leaflet-container .leaflet-control-attribution a {
             color: #38bdf8 !important;
             text-decoration: none;
         }
 
-        /* Bottom Sheet Transition */
-        #mobile-bottom-sheet {
-            transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+        /* Custom City Tooltip */
+        .city-label-tooltip {
+            background: rgba(10, 17, 32, 0.85) !important;
+            border: 1px solid rgba(56, 189, 248, 0.35) !important;
+            color: #f1f5f9 !important;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px !important;
+            border-radius: 8px !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5) !important;
         }
-        #mobile-bottom-sheet.collapsed {
-            transform: translateY(calc(100% - 68px));
+        .city-label-tooltip::before {
+            display: none !important;
         }
 
-        /* Responsive positioning adjustment for Leaflet Zoom */
+        /* Overlay image filter modes */
+        .overlay-sharp {
+            filter: contrast(1.18) saturate(1.25) drop-shadow(0 0 12px rgba(56, 189, 248, 0.2));
+        }
+        .overlay-soft {
+            filter: blur(1px) saturate(1.15);
+        }
+
+        /* Mobile Bottom Sheet Transition */
+        #mobile-bottom-sheet {
+            transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+        #mobile-bottom-sheet.collapsed {
+            transform: translateY(calc(100% - 74px));
+        }
+
         @media (max-width: 767px) {
             .leaflet-bottom.leaflet-right {
-                bottom: 84px !important;
+                bottom: 90px !important;
                 right: 12px !important;
             }
         }
         @media (min-width: 768px) {
             .leaflet-bottom.leaflet-right {
-                bottom: 20px !important;
-                right: 20px !important;
+                bottom: 24px !important;
+                right: 24px !important;
             }
         }
     </style>
 </head>
 <body class="text-slate-100 antialiased select-none overflow-hidden">
-<!-- Leaflet Map Container -->
-<div id="map"></div>
-<!-- ========================================================= -->
-<!-- DESKTOP HEADER (MD & UP) -->
-<!-- ========================================================= -->
-<header class="fixed top-4 left-4 z-[1000] hidden md:flex items-center pointer-events-auto">
-<div class="glass-panel px-4 py-3 rounded-2xl flex items-center gap-3.5 shadow-2xl">
-<div class="relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-400 text-white shadow-lg shadow-blue-500/25 shrink-0">
-<i class="fa-solid fa-cloud-sun text-lg"></i>
-<span class="absolute -top-1 -right-1 flex h-3 w-3">
-<span class="animate-radar absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-<span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-slate-900"></span>
-</span>
-</div>
-<div>
-<div class="flex items-center gap-2">
-<h1 class="font-bold text-base md:text-lg tracking-tight text-white flex items-center gap-1.5">
+
+    <!-- Leaflet Map Container -->
+    <div id="map"></div>
+    <div class="map-vignette"></div>
+
+    <!-- ========================================================= -->
+    <!-- DESKTOP TOP COMMAND BAR (MD & UP)                         -->
+    <!-- ========================================================= -->
+    <header class="fixed top-4 left-4 right-4 z-[1000] hidden md:flex items-center justify-between pointer-events-none">
+        <!-- Brand & Basemap Switcher -->
+        <div class="glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-3.5 pointer-events-auto">
+            <!-- Brand Icon -->
+            <div class="relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 text-white shadow-lg shadow-sky-500/25 shrink-0 border border-white/15">
+                <i class="fa-solid fa-satellite-dish text-lg"></i>
+                <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span class="animate-radar absolute inline-flex h-full w-full rounded-full bg-emerald-400"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-slate-950"></span>
+                </span>
+            </div>
+
+            <!-- Title -->
+            <div class="pr-1">
+                <div class="flex items-center gap-2">
+                    <h1 class="font-extrabold text-base tracking-tight text-white">
                         WebGIS Atmosfer
-                        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30">IDN</span>
-</h1>
-</div>
-<p class="text-xs text-slate-400 font-medium">Pemantauan Suhu &amp; Dinamika Cuaca Realtime</p>
-</div>
-<div class="h-8 w-[1px] bg-slate-700/60 mx-1"></div>
-<!-- Basemap Selector Desktop -->
-<div class="flex items-center gap-1 bg-slate-900/70 p-1 rounded-xl border border-white/10">
-<button class="px-2.5 py-1 text-xs rounded-lg font-medium text-sky-400 bg-white/10 transition basemap-btn" data-type="osm" onclick="setBaseMap('osm')">Terang (Esri)</button>
-<button class="px-2.5 py-1 text-xs rounded-lg font-medium text-slate-400 hover:text-slate-200 transition basemap-btn" data-type="satellite" onclick="setBaseMap('satellite')">Satelit (Esri)</button>
-<button class="px-2.5 py-1 text-xs rounded-lg font-medium text-slate-400 hover:text-slate-200 transition basemap-btn" data-type="dark" onclick="setBaseMap('dark')">Gelap (Esri)</button>
-<button class="px-2.5 py-1 text-xs rounded-lg font-medium text-slate-400 hover:text-slate-200 transition basemap-btn" data-type="topo" onclick="setBaseMap('topo')">Topografi (Esri)</button>
-</div>
-</div>
-</header>
-<!-- ========================================================= -->
-<!-- MOBILE TOP BAR & QUICK CONTROLS (MD HIDE) -->
-<!-- ========================================================= -->
-<div class="fixed top-2 left-2 right-2 z-[1000] flex flex-col gap-2 md:hidden pointer-events-none">
-<div class="glass-panel px-3.5 py-2.5 rounded-2xl flex items-center justify-between shadow-xl pointer-events-auto">
-<div class="flex items-center gap-2.5 min-w-0">
-<div class="relative flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-400 text-white shrink-0 shadow-md shadow-blue-500/20">
-<i class="fa-solid fa-cloud-sun text-sm"></i>
-<span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-<span class="animate-radar absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 border border-slate-900"></span>
-</span>
-</div>
-<div class="truncate">
-<div class="flex items-center gap-1.5">
-<span class="font-bold text-sm text-white tracking-tight truncate">WebGIS Atmosfer</span>
-<span class="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">IDN</span>
-</div>
-<span class="text-[10px] text-slate-400 block truncate">Indonesia Realtime</span>
-</div>
-</div>
-<!-- Mobile Action Buttons -->
-<div class="flex items-center gap-1.5 shrink-0">
-<button class="glass-btn p-2 rounded-xl text-slate-300 hover:text-sky-300" onclick="fitIndonesia()" title="Reset Posisi">
-<i class="fa-solid fa-crosshairs text-xs"></i>
-</button>
-<button class="glass-btn px-2.5 py-1.5 rounded-xl text-sky-400 font-semibold text-xs flex items-center gap-1.5" id="mobile-toggle-btn" onclick="toggleMobileDrawer()">
-<i class="fa-solid fa-chart-simple text-[11px]"></i>
-<span id="mobile-toggle-text">Panel</span>
-</button>
-</div>
-</div>
-<!-- Mobile Basemap Horizontal Scrolling Pills -->
-<div class="glass-panel px-2.5 py-1.5 rounded-xl shadow-lg pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-<span class="text-[10px] text-slate-400 uppercase font-semibold shrink-0 pl-1 pr-0.5 flex items-center gap-1">
-<i class="fa-solid fa-layer-group text-[9px]"></i> Peta:
-            </span>
-<div class="flex items-center gap-1 shrink-0">
-<button class="px-2.5 py-1 text-[11px] rounded-lg font-medium text-sky-400 bg-white/10 transition whitespace-nowrap basemap-btn" data-type="osm" onclick="setBaseMap('osm')">Terang</button>
-<button class="px-2.5 py-1 text-[11px] rounded-lg font-medium text-slate-400 hover:text-slate-200 transition whitespace-nowrap basemap-btn" data-type="satellite" onclick="setBaseMap('satellite')">Satelit</button>
-<button class="px-2.5 py-1 text-[11px] rounded-lg font-medium text-slate-400 hover:text-slate-200 transition whitespace-nowrap basemap-btn" data-type="dark" onclick="setBaseMap('dark')">Gelap</button>
-<button class="px-2.5 py-1 text-[11px] rounded-lg font-medium text-slate-400 hover:text-slate-200 transition whitespace-nowrap basemap-btn" data-type="topo" onclick="setBaseMap('topo')">Topografi</button>
-</div>
-</div>
-</div>
-<!-- ========================================================= -->
-<!-- DESKTOP FLOATING SIDEBAR (MD & UP) -->
-<!-- ========================================================= -->
-<aside class="fixed top-4 right-4 z-[1000] w-[350px] pointer-events-auto hidden md:block">
-<div class="glass-panel p-5 rounded-2xl flex flex-col gap-4 text-slate-200">
-<!-- Panel Header & Sync Badge -->
-<div class="flex items-center justify-between pb-3 border-b border-white/10">
-<div class="flex items-center gap-2">
-<span class="p-1.5 rounded-lg bg-sky-500/15 text-sky-400 text-xs">
-<i class="fa-solid fa-temperature-half"></i>
-</span>
-<span class="text-sm font-semibold text-white tracking-wide">Suhu Permukaan (2m)</span>
-</div>
-<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold">
-<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-<span class="sync-status-indicator">STANDBY</span>
-</div>
-</div>
-<!-- Last Updated Timestamp Card -->
-<div class="bg-slate-900/60 rounded-xl p-3 border border-white/5 flex flex-col gap-1">
-<div class="flex items-center justify-between">
-<span class="text-[10px] tracking-wider uppercase font-semibold text-slate-400 flex items-center gap-1">
-<i class="fa-regular fa-clock"></i> Pembaruan Terakhir
+                    </h1>
+                    <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 border border-sky-400/30 font-mono">
+                        IDN • 2M TEMP
                     </span>
-<span class="text-[10px] font-mono text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">30s polling</span>
-</div>
-<div class="text-sm font-bold text-white font-mono flex items-center gap-2 mt-0.5 time-label-indicator">
-<i class="fa-solid fa-circle-notch fa-spin text-xs text-sky-400"></i> Memuat data...
                 </div>
-</div>
-<!-- Stats Metrics Grid -->
-<div class="grid grid-cols-2 gap-2.5">
-<div class="bg-slate-900/60 rounded-xl p-3 border border-white/5">
-<span class="text-[10px] uppercase font-semibold tracking-wider text-slate-400 block mb-1">Rata-Rata Suhu</span>
-<div class="text-xl font-bold text-sky-300 font-mono stat-avg-indicator">--.- °C</div>
-<span class="text-[10px] text-slate-500">Wilayah Indonesia</span>
-</div>
-<div class="bg-slate-900/60 rounded-xl p-3 border border-white/5">
-<span class="text-[10px] uppercase font-semibold tracking-wider text-slate-400 block mb-1">Status Lapisan</span>
-<div class="text-xs font-semibold text-emerald-400 mt-1 flex items-center gap-1 layer-status-indicator">
-<i class="fa-solid fa-circle-check"></i> Siap Menampilkan
-                    </div>
-<span class="text-[10px] text-slate-400 truncate block mt-0.5 active-file-indicator" title="Belum ada layer">-</span>
-</div>
-</div>
-<!-- Interactive Layer Opacity Slider -->
-<div class="flex flex-col gap-1.5 pt-1">
-<div class="flex justify-between items-center text-xs">
-<span class="text-slate-300 font-medium flex items-center gap-1.5">
-<i class="fa-solid fa-sliders text-slate-400 text-[11px]"></i> Transparansi Lapisan
-                    </span>
-<span class="font-mono text-sky-400 font-semibold text-xs opacity-val-indicator">80%</span>
-</div>
-<input class="w-full h-1.5 bg-slate-700/70 rounded-lg appearance-none cursor-pointer accent-sky-400 hover:accent-sky-300 opacity-slider-input" max="100" min="10" type="range" value="80">
-</div>
-<!-- Temperature Legend Section -->
-<div class="pt-2 border-t border-white/10 flex flex-col gap-2">
-<div class="flex items-center justify-between text-xs font-medium text-slate-300">
-<span class="flex items-center gap-1.5">
-<i class="fa-solid fa-palette text-slate-400"></i> Legenda Gradien
-                    </span>
-<span class="text-[11px] text-slate-400 font-mono">20°C - 36°C</span>
-</div>
-<!-- Custom Bar -->
-<div class="relative py-1">
-<div class="temp-gradient h-3.5 rounded-lg shadow-inner border border-white/10"></div>
-</div>
-<div class="flex justify-between items-center text-[11px] text-slate-300 font-medium px-0.5">
-<span class="flex items-center gap-1 text-blue-300"><span class="w-2 h-2 rounded-full bg-blue-500"></span> 20°C (Sejuk)</span>
-<span class="text-slate-400">28°C</span>
-<span class="flex items-center gap-1 text-red-400">36°C (Panas) <span class="w-2 h-2 rounded-full bg-red-500"></span></span>
-</div>
-</div>
-<!-- Quick Action Toolbar -->
-<div class="pt-2 flex items-center gap-2">
-<button class="glass-btn flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5" onclick="fitIndonesia()">
-<i class="fa-solid fa-crosshairs text-sky-400"></i> Reset Posisi Peta
+                <p class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                    Observatorium Dinamika Suhu & Cuaca Realtime
+                </p>
+            </div>
+
+            <div class="h-8 w-[1px] bg-slate-700/70"></div>
+
+            <!-- Basemap Selector -->
+            <div class="flex items-center gap-1 bg-slate-950/70 p-1 rounded-xl border border-white/10">
+                <button class="px-2.5 py-1.5 text-xs rounded-lg font-semibold text-sky-400 bg-sky-500/15 border border-sky-400/30 transition basemap-btn flex items-center gap-1.5" data-type="dark" onclick="setBaseMap('dark')">
+                    <i class="fa-solid fa-moon text-[10px]"></i> Gelap
                 </button>
-<button class="glass-btn py-2 px-3.5 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 btn-refresh-target" onclick="manualRefresh()" title="Muat ulang data">
-<i class="fa-solid fa-rotate text-emerald-400"></i>
-</button>
-</div>
-</div>
-</aside>
-<!-- ========================================================= -->
-<!-- MOBILE BOTTOM SHEET / COLLAPSIBLE DRAWER (MD HIDE) -->
-<!-- ========================================================= -->
-<div class="fixed left-0 right-0 bottom-0 z-[1001] md:hidden collapsed pointer-events-auto" id="mobile-bottom-sheet">
-<div class="glass-panel rounded-t-3xl border-b-0 px-4 pt-2.5 pb-6 shadow-2xl flex flex-col max-h-[75vh]">
-<!-- Drag Handle Bar / Toggle Header -->
-<div class="cursor-pointer flex flex-col items-center justify-center pb-2 select-none" onclick="toggleMobileDrawer()">
-<div class="w-12 h-1.5 rounded-full bg-slate-500/50 mb-2.5"></div>
-<div class="w-full flex items-center justify-between">
-<div class="flex items-center gap-2">
-<span class="p-1 rounded-md bg-sky-500/20 text-sky-400 text-xs">
-<i class="fa-solid fa-temperature-half"></i>
-</span>
-<span class="text-xs font-bold text-white uppercase tracking-wider">Metrik Atmosfer &amp; Suhu</span>
-</div>
-<div class="flex items-center gap-2">
-<span class="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
-<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-<span class="sync-status-indicator">STANDBY</span>
-</span>
-<i class="fa-solid fa-chevron-up text-xs text-slate-400 transition-transform duration-300" id="drawer-chevron"></i>
-</div>
-</div>
-</div>
-<!-- Scrollable Drawer Content -->
-<div class="overflow-y-auto pt-2 flex flex-col gap-3.5 pr-0.5">
-<!-- Timestamp & Polling Card -->
-<div class="bg-slate-900/70 rounded-xl p-2.5 border border-white/5 flex flex-col gap-1">
-<div class="flex items-center justify-between text-[10px]">
-<span class="text-slate-400 font-medium flex items-center gap-1">
-<i class="fa-regular fa-clock"></i> Pembaruan Terakhir
-                        </span>
-<span class="font-mono text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">30s polling</span>
-</div>
-<div class="text-xs font-bold text-white font-mono flex items-center gap-2 time-label-indicator">
-<i class="fa-solid fa-circle-notch fa-spin text-xs text-sky-400"></i> Memuat data...
+                <button class="px-2.5 py-1.5 text-xs rounded-lg font-medium text-slate-400 hover:text-slate-200 border border-transparent transition basemap-btn flex items-center gap-1.5" data-type="satellite" onclick="setBaseMap('satellite')">
+                    <i class="fa-solid fa-earth-asia text-[10px]"></i> Satelit
+                </button>
+                <button class="px-2.5 py-1.5 text-xs rounded-lg font-medium text-slate-400 hover:text-slate-200 border border-transparent transition basemap-btn flex items-center gap-1.5" data-type="topo" onclick="setBaseMap('topo')">
+                    <i class="fa-solid fa-mountain text-[10px]"></i> Topografi
+                </button>
+                <button class="px-2.5 py-1.5 text-xs rounded-lg font-medium text-slate-400 hover:text-slate-200 border border-transparent transition basemap-btn flex items-center gap-1.5" data-type="osm" onclick="setBaseMap('osm')">
+                    <i class="fa-solid fa-map text-[10px]"></i> Terang
+                </button>
+            </div>
+        </div>
+
+        <!-- Center/Right HUD: Live Coordinates & Quick Tools -->
+        <div class="flex items-center gap-2.5 pointer-events-auto">
+            <!-- Live Coordinate Tracker -->
+            <div class="glass-panel px-3.5 py-2.5 rounded-2xl flex items-center gap-3 text-xs font-mono">
+                <div class="flex items-center gap-1.5 text-sky-400">
+                    <i class="fa-solid fa-location-crosshairs"></i>
+                    <span class="text-[10px] uppercase tracking-wider font-sans font-bold text-slate-400">Kursor</span>
+                </div>
+                <span id="cursor-coords" class="text-slate-200 font-semibold tracking-tight min-w-[145px] text-right">
+                    02.50° LS, 118.00° BT
+                </span>
+            </div>
+
+            <!-- City Markers Toggle & Fullscreen -->
+            <div class="glass-panel p-1.5 rounded-2xl flex items-center gap-1">
+                <button id="btn-cities" onclick="toggleCityMarkers()" class="glass-btn px-3 py-2 rounded-xl text-xs font-semibold text-sky-400 border-sky-400/30 flex items-center gap-1.5" title="Tampilkan/Sembunyikan Titik Kota Utama">
+                    <i class="fa-solid fa-city"></i>
+                    <span class="hidden xl:inline">Kota Utama</span>
+                </button>
+                <button onclick="toggleFullscreen()" class="glass-btn w-9 h-9 rounded-xl text-xs text-slate-300 flex items-center justify-center" title="Layar Penuh (Fullscreen)">
+                    <i id="fullscreen-icon" class="fa-solid fa-expand"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========================================================= -->
+    <!-- DESKTOP LEFT QUICK-JUMP ISLAND NAVIGATOR (MD & UP)        -->
+    <!-- ========================================================= -->
+    <nav class="fixed top-24 left-4 z-[1000] hidden md:flex flex-col gap-2 pointer-events-auto w-44">
+        <div class="glass-panel p-3 rounded-2xl flex flex-col gap-2">
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
+                <span class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-compass text-sky-400"></i> Pintasan Pulau
+                </span>
+            </div>
+            <div class="flex flex-col gap-1">
+                <button onclick="flyToRegion('indonesia', this)" class="island-pill active text-left px-2.5 py-1.5 rounded-xl text-xs font-semibold text-sky-400 flex items-center justify-between">
+                    <span>🇮🇩 Seluruh Indonesia</span>
+                    <i class="fa-solid fa-chevron-right text-[9px] opacity-70"></i>
+                </button>
+                <button onclick="flyToRegion('sumatera', this)" class="island-pill text-left px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 flex items-center justify-between">
+                    <span>Sumatera</span>
+                    <span class="text-[10px] font-mono text-slate-500">0°LU</span>
+                </button>
+                <button onclick="flyToRegion('jawa', this)" class="island-pill text-left px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 flex items-center justify-between">
+                    <span>Jawa & Madura</span>
+                    <span class="text-[10px] font-mono text-slate-500">7°LS</span>
+                </button>
+                <button onclick="flyToRegion('kalimantan', this)" class="island-pill text-left px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 flex items-center justify-between">
+                    <span>Kalimantan</span>
+                    <span class="text-[10px] font-mono text-slate-500">1°LS</span>
+                </button>
+                <button onclick="flyToRegion('sulawesi', this)" class="island-pill text-left px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 flex items-center justify-between">
+                    <span>Sulawesi</span>
+                    <span class="text-[10px] font-mono text-slate-500">2°LS</span>
+                </button>
+                <button onclick="flyToRegion('balinusa', this)" class="island-pill text-left px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 flex items-center justify-between">
+                    <span>Bali & Nusa Tenggara</span>
+                    <span class="text-[10px] font-mono text-slate-500">9°LS</span>
+                </button>
+                <button onclick="flyToRegion('maluku', this)" class="island-pill text-left px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 flex items-center justify-between">
+                    <span>Kep. Maluku</span>
+                    <span class="text-[10px] font-mono text-slate-500">3°LS</span>
+                </button>
+                <button onclick="flyToRegion('papua', this)" class="island-pill text-left px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 flex items-center justify-between">
+                    <span>Papua</span>
+                    <span class="text-[10px] font-mono text-slate-500">4°LS</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ========================================================= -->
+    <!-- MOBILE TOP BAR & HORIZONTAL PILLS (MD HIDE)               -->
+    <!-- ========================================================= -->
+    <div class="fixed top-2.5 left-2.5 right-2.5 z-[1000] flex flex-col gap-2 md:hidden pointer-events-none">
+        <div class="glass-panel px-3.5 py-2.5 rounded-2xl flex items-center justify-between shadow-xl pointer-events-auto">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 text-white shrink-0 shadow-md shadow-sky-500/20">
+                    <i class="fa-solid fa-satellite-dish text-sm"></i>
+                    <span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                        <span class="animate-radar absolute inline-flex h-full w-full rounded-full bg-emerald-400"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 border border-slate-900"></span>
+                    </span>
+                </div>
+                <div class="truncate">
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-bold text-sm text-white tracking-tight truncate">WebGIS Atmosfer</span>
+                        <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30 font-mono">IDN</span>
                     </div>
-</div>
-<!-- Stats Grid -->
-<div class="grid grid-cols-2 gap-2">
-<div class="bg-slate-900/70 rounded-xl p-2.5 border border-white/5">
-<span class="text-[9px] uppercase font-semibold tracking-wider text-slate-400 block mb-0.5">Rata-Rata Suhu</span>
-<div class="text-lg font-bold text-sky-300 font-mono stat-avg-indicator">--.- °C</div>
-<span class="text-[9px] text-slate-500">Indonesia</span>
-</div>
-<div class="bg-slate-900/70 rounded-xl p-2.5 border border-white/5">
-<span class="text-[9px] uppercase font-semibold tracking-wider text-slate-400 block mb-0.5">Status Lapisan</span>
-<div class="text-[11px] font-semibold text-emerald-400 flex items-center gap-1 layer-status-indicator truncate">
-<i class="fa-solid fa-circle-check"></i> Siap
+                    <span class="text-[10px] text-slate-400 block truncate">Pemantauan Suhu 2m Realtime</span>
+                </div>
+            </div>
+
+            <!-- Mobile Action Buttons -->
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button class="glass-btn p-2 rounded-xl text-slate-300 hover:text-sky-300" onclick="fitIndonesia()" title="Reset Posisi">
+                    <i class="fa-solid fa-crosshairs text-xs"></i>
+                </button>
+                <button class="glass-btn px-3 py-1.5 rounded-xl text-sky-400 font-semibold text-xs flex items-center gap-1.5 border border-sky-400/30" id="mobile-toggle-btn" onclick="toggleMobileDrawer()">
+                    <i class="fa-solid fa-sliders text-[11px]"></i>
+                    <span id="mobile-toggle-text">Panel</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Basemap & Region Quick Pills -->
+        <div class="glass-panel px-2.5 py-1.5 rounded-xl shadow-lg pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <button class="px-2.5 py-1 text-[11px] rounded-lg font-semibold text-sky-400 bg-sky-500/15 border border-sky-400/30 transition whitespace-nowrap basemap-btn" data-type="dark" onclick="setBaseMap('dark')">Gelap</button>
+            <button class="px-2.5 py-1 text-[11px] rounded-lg font-medium text-slate-400 hover:text-slate-200 border border-transparent transition whitespace-nowrap basemap-btn" data-type="satellite" onclick="setBaseMap('satellite')">Satelit</button>
+            <button class="px-2.5 py-1 text-[11px] rounded-lg font-medium text-slate-400 hover:text-slate-200 border border-transparent transition whitespace-nowrap basemap-btn" data-type="topo" onclick="setBaseMap('topo')">Topografi</button>
+            <button class="px-2.5 py-1 text-[11px] rounded-lg font-medium text-slate-400 hover:text-slate-200 border border-transparent transition whitespace-nowrap basemap-btn" data-type="osm" onclick="setBaseMap('osm')">Terang</button>
+            <div class="h-4 w-[1px] bg-slate-700 shrink-0 mx-0.5"></div>
+            <button onclick="flyToRegion('jawa', this)" class="px-2 py-1 text-[11px] rounded-lg text-slate-300 bg-slate-800/70 whitespace-nowrap">Jawa</button>
+            <button onclick="flyToRegion('sumatera', this)" class="px-2 py-1 text-[11px] rounded-lg text-slate-300 bg-slate-800/70 whitespace-nowrap">Sumatera</button>
+            <button onclick="flyToRegion('kalimantan', this)" class="px-2 py-1 text-[11px] rounded-lg text-slate-300 bg-slate-800/70 whitespace-nowrap">Kalimantan</button>
+            <button onclick="flyToRegion('sulawesi', this)" class="px-2 py-1 text-[11px] rounded-lg text-slate-300 bg-slate-800/70 whitespace-nowrap">Sulawesi</button>
+            <button onclick="flyToRegion('papua', this)" class="px-2 py-1 text-[11px] rounded-lg text-slate-300 bg-slate-800/70 whitespace-nowrap">Papua</button>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- DESKTOP ANALYTICS SIDEBAR (MD & UP)                       -->
+    <!-- ========================================================= -->
+    <aside class="fixed top-20 right-4 z-[1000] w-[360px] pointer-events-auto hidden md:block">
+        <div class="glass-panel p-5 rounded-3xl flex flex-col gap-4 text-slate-200">
+            <!-- Panel Header & Live Sync Badge -->
+            <div class="flex items-center justify-between pb-3 border-b border-white/10">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500/25 to-blue-600/20 border border-sky-400/30 text-sky-400 flex items-center justify-center text-sm shadow-inner">
+                        <i class="fa-solid fa-temperature-three-quarters"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-sm font-bold text-white tracking-wide">Telemetri Suhu Permukaan</h2>
+                        <span class="text-[10px] text-slate-400">Ketinggian 2 Meter (ERA5 / GFS Model)</span>
+                    </div>
+                </div>
+                <div id="desktop-sync-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold tracking-wider">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="sync-status-indicator">STANDBY</span>
+                </div>
+            </div>
+
+            <!-- Hero Average Temperature Display Card -->
+            <div class="relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br from-slate-900/90 via-slate-900/70 to-sky-950/40 border border-sky-500/20 shadow-lg">
+                <div class="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-sky-500/10 blur-2xl pointer-events-none" id="hero-glow"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase font-bold tracking-widest text-sky-400/90 block mb-1">
+                            Rata-Rata Suhu Wilayah
+                        </span>
+                        <div class="flex items-baseline gap-2">
+                            <div class="text-3xl font-extrabold text-white font-mono tracking-tight stat-avg-indicator">--.- °C</div>
+                            <span class="thermal-category-badge text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                                Memantau
+                            </span>
                         </div>
-<span class="text-[9px] text-slate-400 truncate block mt-0.5 active-file-indicator" title="Belum ada layer">-</span>
-</div>
-</div>
-<!-- Opacity Slider -->
-<div class="flex flex-col gap-1">
-<div class="flex justify-between items-center text-xs">
-<span class="text-slate-300 font-medium flex items-center gap-1.5">
-<i class="fa-solid fa-sliders text-slate-400 text-[11px]"></i> Transparansi Lapisan
-                        </span>
-<span class="font-mono text-sky-400 font-semibold opacity-val-indicator">80%</span>
-</div>
-<input class="w-full h-1.5 bg-slate-700/70 rounded-lg appearance-none cursor-pointer accent-sky-400 hover:accent-sky-300 opacity-slider-input" max="100" min="10" type="range" value="80">
-</div>
-<!-- Temperature Legend -->
-<div class="border-t border-white/10 pt-2.5 flex flex-col gap-1.5">
-<div class="flex items-center justify-between text-xs font-medium text-slate-300">
-<span class="flex items-center gap-1 text-[11px]">
-<i class="fa-solid fa-palette text-slate-400"></i> Legenda Gradien
-                        </span>
-<span class="text-[10px] text-slate-400 font-mono">20°C - 36°C</span>
-</div>
-<div class="temp-gradient h-3 rounded-lg shadow-inner border border-white/10"></div>
-<div class="flex justify-between items-center text-[10px] text-slate-300 font-medium px-0.5">
-<span class="text-blue-300">20°C (Sejuk)</span>
-<span class="text-slate-400">28°C</span>
-<span class="text-red-400">36°C (Panas)</span>
-</div>
-</div>
-<!-- Action Buttons Mobile -->
-<div class="pt-1 flex items-center gap-2">
-<button class="glass-btn flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5" onclick="fitIndonesia()">
-<i class="fa-solid fa-crosshairs text-sky-400"></i> Reset Peta
-                    </button>
-<button class="glass-btn flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 btn-refresh-target" onclick="manualRefresh()">
-<i class="fa-solid fa-rotate text-emerald-400"></i> Refresh
-                    </button>
-</div>
-<!-- Mobile Footer Link -->
-<div class="pt-1 text-center">
-<a class="text-[11px] text-slate-400 hover:text-sky-300 transition inline-flex items-center gap-1.5" href="https://github.com/Bodilss/webgis-atmosfer-otomatis" target="_blank">
-<i class="fa-brands fa-github"></i> Repository GitHub
-                    </a>
-</div>
-</div>
-</div>
-</div>
-<!-- ========================================================= -->
-<!-- DESKTOP BOTTOM LEFT STATUS & REPO LINK (MD & UP) -->
-<!-- ========================================================= -->
-<div class="fixed bottom-4 left-4 z-[1000] hidden md:flex items-center gap-2">
-<div class="glass-panel px-3.5 py-2 rounded-xl flex items-center gap-2.5 text-xs text-slate-300">
-<span class="flex h-2 w-2 relative">
-<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-<span class="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
-</span>
-<span>Dataset: <strong>Hourly Atmospheric Model</strong></span>
-<span class="text-slate-500">•</span>
-<a class="hover:text-sky-300 transition flex items-center gap-1" href="https://github.com/Bodilss/webgis-atmosfer-otomatis" target="_blank">
-<i class="fa-brands fa-github"></i> Repository
+                        <span class="text-[11px] text-slate-400 mt-1 block">Rentang Peta: 20.0°C — 36.0°C</span>
+                    </div>
+                    <div class="w-11 h-11 rounded-2xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center text-sky-300 text-xl">
+                        <i class="fa-solid fa-sun-plant-wilt"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timestamp & Auto-Sync Countdown Bar -->
+            <div class="glass-card rounded-2xl p-3.5 flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] tracking-wider uppercase font-bold text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-regular fa-clock text-sky-400"></i> Pembaruan Data Terakhir
+                    </span>
+                    <span class="text-[10px] font-mono text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-md border border-sky-500/20 flex items-center gap-1">
+                        <i class="fa-solid fa-bolt text-[9px]"></i> <span class="countdown-indicator">30s</span>
+                    </span>
+                </div>
+                <div class="text-xs font-bold text-white font-mono flex items-center gap-2 time-label-indicator">
+                    <i class="fa-solid fa-circle-notch fa-spin text-xs text-sky-400"></i> Menghubungkan ke repositori...
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-full h-1 bg-slate-800 rounded-full overflow-hidden mt-0.5">
+                    <div class="h-full bg-gradient-to-r from-sky-500 to-emerald-400 transition-all duration-1000 countdown-bar" style="width: 100%"></div>
+                </div>
+            </div>
+
+            <!-- Layer File Status & Visibility Switch -->
+            <div class="grid grid-cols-2 gap-2.5">
+                <div class="glass-card rounded-xl p-3">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Status Raster</span>
+                    <div class="text-xs font-semibold text-emerald-400 flex items-center gap-1.5 layer-status-indicator truncate">
+                        <i class="fa-solid fa-circle-check"></i> Siap Menampilkan
+                    </div>
+                    <span class="text-[10px] font-mono text-slate-400 truncate block mt-1 active-file-indicator" title="File Layer Aktif">-</span>
+                </div>
+
+                <div class="glass-card rounded-xl p-3 flex flex-col justify-between">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Filter Visual</span>
+                    <div class="flex items-center gap-1 mt-1">
+                        <button onclick="setOverlayFilter('normal')" class="filter-btn flex-1 py-1 text-[10px] font-semibold rounded-lg bg-sky-500/20 text-sky-300 border border-sky-400/30" data-filter="normal">Normal</button>
+                        <button onclick="setOverlayFilter('sharp')" class="filter-btn flex-1 py-1 text-[10px] font-medium rounded-lg bg-slate-800/70 text-slate-400 hover:text-slate-200 border border-transparent" data-filter="sharp">Tajam</button>
+                        <button onclick="setOverlayFilter('soft')" class="filter-btn flex-1 py-1 text-[10px] font-medium rounded-lg bg-slate-800/70 text-slate-400 hover:text-slate-200 border border-transparent" data-filter="soft">Halus</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Opacity Slider -->
+            <div class="glass-card rounded-2xl p-3.5 flex flex-col gap-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-200 font-semibold flex items-center gap-1.5">
+                        <i class="fa-solid fa-layer-group text-sky-400 text-[11px]"></i> Opasitas Lapisan Suhu
+                    </span>
+                    <span class="font-mono text-sky-400 font-bold text-xs bg-sky-500/10 px-2 py-0.5 rounded-md border border-sky-400/20 opacity-val-indicator">80%</span>
+                </div>
+                <input class="w-full custom-slider opacity-slider-input" max="100" min="0" type="range" value="80">
+                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>0% (Transparan)</span>
+                    <span>50%</span>
+                    <span>100% (Solid)</span>
+                </div>
+            </div>
+
+            <!-- Quick Action Toolbar -->
+            <div class="flex items-center gap-2 pt-1">
+                <button id="btn-layer-toggle" class="glass-btn py-2.5 px-3 rounded-xl text-xs font-semibold text-sky-400 flex items-center justify-center gap-1.5" onclick="toggleLayerVisibility()" title="Sembunyikan/Tampilkan Layer">
+                    <i class="fa-solid fa-eye"></i>
+                </button>
+                <button class="glass-btn flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-2" onclick="fitIndonesia()">
+                    <i class="fa-solid fa-compress text-sky-400"></i> Reset Fokus
+                </button>
+                <button class="glass-btn py-2.5 px-3.5 rounded-xl text-xs font-semibold text-emerald-400 flex items-center justify-center gap-1.5 btn-refresh-target" onclick="manualRefresh()" title="Sinkronisasi ulang sekarang">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    <span>Sync</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ========================================================= -->
+    <!-- DESKTOP BOTTOM FLOATING LEGEND DOCK (MD & UP)             -->
+    <!-- ========================================================= -->
+    <div class="fixed bottom-5 left-1/2 -translate-x-1/2 z-[1000] hidden md:flex items-center gap-3 pointer-events-auto">
+        <div class="glass-panel px-5 py-3 rounded-2xl flex items-center gap-4 shadow-2xl min-w-[540px]">
+            <div class="flex items-center gap-2 shrink-0">
+                <span class="w-7 h-7 rounded-lg bg-sky-500/15 border border-sky-400/30 flex items-center justify-center text-sky-400 text-xs">
+                    <i class="fa-solid fa-palette"></i>
+                </span>
+                <div>
+                    <span class="text-xs font-bold text-white block leading-tight">Skala Suhu</span>
+                    <span class="text-[10px] text-slate-400 font-mono">Celcius (°C)</span>
+                </div>
+            </div>
+
+            <div class="flex-1 flex flex-col gap-1.5">
+                <div class="temp-gradient h-3 rounded-full shadow-inner border border-white/15 relative"></div>
+                <div class="flex justify-between items-center text-[10px] font-mono text-slate-300 px-0.5">
+                    <span class="text-blue-400 font-semibold">20°</span>
+                    <span>22°</span>
+                    <span class="text-cyan-300">24°</span>
+                    <span>26°</span>
+                    <span class="text-emerald-300 font-semibold">28°</span>
+                    <span>30°</span>
+                    <span class="text-amber-300">32°</span>
+                    <span>34°</span>
+                    <span class="text-red-400 font-semibold">36°C</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- DESKTOP BOTTOM LEFT REPO BADGE (MD & UP)                  -->
+    <!-- ========================================================= -->
+    <div class="fixed bottom-5 left-4 z-[1000] hidden lg:flex items-center gap-2 pointer-events-auto">
+        <div class="glass-panel px-3.5 py-2.5 rounded-2xl flex items-center gap-2.5 text-xs text-slate-300">
+            <span class="flex h-2 w-2 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+            </span>
+            <span class="text-[11px]">Auto-Pipeline: <strong class="text-white">GitHub Actions</strong></span>
+            <span class="text-slate-600">•</span>
+            <a class="text-[11px] text-sky-400 hover:text-sky-300 font-semibold transition flex items-center gap-1" href="https://github.com/Bodilss/webgis-atmosfer-otomatis" target="_blank" rel="noopener">
+                <i class="fa-brands fa-github"></i> Bodilss
             </a>
-</div>
-</div>
-<!-- Leaflet JS & Application Logic -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-        // Init Map View targeted to Indonesia archipelago (Responsive initial zoom)
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- MOBILE BOTTOM SHEET / COLLAPSIBLE DRAWER (MD HIDE)        -->
+    <!-- ========================================================= -->
+    <div class="fixed left-0 right-0 bottom-0 z-[1001] md:hidden collapsed pointer-events-auto" id="mobile-bottom-sheet">
+        <div class="glass-panel rounded-t-3xl border-b-0 px-4 pt-2.5 pb-6 shadow-2xl flex flex-col max-h-[78vh]">
+            <!-- Drag Handle Bar / Toggle Header -->
+            <div class="cursor-pointer flex flex-col items-center justify-center pb-2 select-none" onclick="toggleMobileDrawer()">
+                <div class="w-12 h-1.5 rounded-full bg-slate-500/50 mb-2.5"></div>
+                <div class="w-full flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="p-1.5 rounded-lg bg-sky-500/20 text-sky-400 text-xs">
+                            <i class="fa-solid fa-temperature-three-quarters"></i>
+                        </span>
+                        <div>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider block">Telemetri Atmosfer & Suhu</span>
+                            <span class="text-[10px] text-slate-400 font-mono">Rata-rata: <strong class="text-sky-300 stat-avg-indicator">--.- °C</strong></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span class="sync-status-indicator">STANDBY</span>
+                        </span>
+                        <i class="fa-solid fa-chevron-up text-xs text-slate-400 transition-transform duration-300" id="drawer-chevron"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scrollable Drawer Content -->
+            <div class="overflow-y-auto pt-3 flex flex-col gap-3.5 pr-0.5">
+                <!-- Timestamp & Polling Card -->
+                <div class="bg-slate-900/80 rounded-2xl p-3 border border-white/10 flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-[10px]">
+                        <span class="text-slate-400 font-semibold uppercase flex items-center gap-1">
+                            <i class="fa-regular fa-clock text-sky-400"></i> Pembaruan Terakhir
+                        </span>
+                        <span class="font-mono text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20 countdown-indicator">30s</span>
+                    </div>
+                    <div class="text-xs font-bold text-white font-mono flex items-center gap-2 time-label-indicator">
+                        <i class="fa-solid fa-circle-notch fa-spin text-xs text-sky-400"></i> Memuat data...
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="bg-slate-900/80 rounded-2xl p-3 border border-white/10">
+                        <span class="text-[9px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Rata-Rata Suhu</span>
+                        <div class="text-xl font-extrabold text-sky-300 font-mono stat-avg-indicator">--.- °C</div>
+                        <span class="thermal-category-badge text-[9px] font-semibold text-slate-400">Wilayah Indonesia</span>
+                    </div>
+                    <div class="bg-slate-900/80 rounded-2xl p-3 border border-white/10">
+                        <span class="text-[9px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Status Lapisan</span>
+                        <div class="text-[11px] font-semibold text-emerald-400 flex items-center gap-1 layer-status-indicator truncate">
+                            <i class="fa-solid fa-circle-check"></i> Siap
+                        </div>
+                        <span class="text-[9px] font-mono text-slate-400 truncate block mt-1 active-file-indicator">-</span>
+                    </div>
+                </div>
+
+                <!-- Opacity Slider -->
+                <div class="bg-slate-900/80 rounded-2xl p-3 border border-white/10 flex flex-col gap-1.5">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-300 font-medium flex items-center gap-1.5">
+                            <i class="fa-solid fa-sliders text-sky-400 text-[11px]"></i> Opasitas Lapisan
+                        </span>
+                        <span class="font-mono text-sky-400 font-semibold opacity-val-indicator">80%</span>
+                    </div>
+                    <input class="w-full custom-slider opacity-slider-input" max="100" min="0" type="range" value="80">
+                </div>
+
+                <!-- Temperature Legend Mobile -->
+                <div class="bg-slate-900/80 rounded-2xl p-3 border border-white/10 flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-xs font-medium text-slate-300">
+                        <span class="flex items-center gap-1.5 text-[11px]">
+                            <i class="fa-solid fa-palette text-sky-400"></i> Skala Gradien Suhu
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-mono">20°C — 36°C</span>
+                    </div>
+                    <div class="temp-gradient h-3 rounded-full shadow-inner border border-white/10"></div>
+                    <div class="flex justify-between items-center text-[10px] text-slate-300 font-mono px-0.5">
+                        <span class="text-blue-400">20°C</span>
+                        <span class="text-cyan-300">24°C</span>
+                        <span class="text-emerald-300">28°C</span>
+                        <span class="text-amber-300">32°C</span>
+                        <span class="text-red-400">36°C</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons Mobile -->
+                <div class="pt-1 flex items-center gap-2">
+                    <button class="glass-btn flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5" onclick="fitIndonesia()">
+                        <i class="fa-solid fa-crosshairs text-sky-400"></i> Reset Peta
+                    </button>
+                    <button class="glass-btn flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 btn-refresh-target" onclick="manualRefresh()">
+                        <i class="fa-solid fa-rotate text-emerald-400"></i> Sinkronisasi
+                    </button>
+                </div>
+
+                <!-- Mobile Footer Link -->
+                <div class="pt-1 text-center">
+                    <a class="text-[11px] text-slate-400 hover:text-sky-300 transition inline-flex items-center gap-1.5" href="https://github.com/Bodilss/webgis-atmosfer-otomatis" target="_blank" rel="noopener">
+                        <i class="fa-brands fa-github"></i> Repository GitHub Bodilss/webgis-atmosfer-otomatis
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS & Application Logic -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. Initialize Map targeted to Indonesia Archipelago
         const isMobileScreen = window.innerWidth < 768;
         const defaultCenter = [-2.5, 118.0];
         const defaultZoom = isMobileScreen ? 4.2 : 5;
-        
+
         const map = L.map('map', {
-            zoomControl: false
+            zoomControl: false,
+            attributionControl: true
         }).setView(defaultCenter, defaultZoom);
 
-        // Reposition Leaflet Zoom Control to bottom-right (CSS handles mobile safe margin)
-        L.control.zoom({
-            position: 'bottomright'
-        }).addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // Reliable tile providers - No API keys required, safe from OSM volunteer tile policy 403 blocks
+        // 2. Basemap Providers (Defaulting to Dark Map for high thermal contrast)
         const basemaps = {
-            osm: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '&copy; Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, METI, TomTom',
+            dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+                subdomains: 'abcd',
                 maxZoom: 19
             }),
             satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: '&copy; Esri, Maxar, Earthstar Geographics',
                 maxZoom: 18
             }),
-            dark: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and GIS user community',
-                maxZoom: 16
-            }),
             topo: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '&copy; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey',
+                attribution: '&copy; Esri, USGS, NOAA',
                 maxZoom: 18
+            }),
+            osm: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; Esri, HERE, Garmin',
+                maxZoom: 19
             })
         };
 
-        // Fallback error handler on tile error to prevent unsightly yellow broken indicators
         Object.values(basemaps).forEach(layer => {
             layer.on('tileerror', function(error, tile) {
-                if (tile && tile.src) {
-                    tile.style.display = 'none';
-                }
+                if (tile && tile.src) tile.style.display = 'none';
             });
         });
 
-        // Active basemap - Esri World Street Map (Terang)
-        let activeBasemap = basemaps.osm;
+        let activeBasemap = basemaps.dark;
         activeBasemap.addTo(map);
 
         function setBaseMap(type) {
@@ -494,39 +755,142 @@
             activeBasemap = basemaps[type];
             activeBasemap.addTo(map);
 
-            if (currentLayer) {
+            if (currentLayer && isLayerVisible) {
                 currentLayer.bringToFront();
             }
 
-            // Sync visual states for both desktop and mobile buttons
             document.querySelectorAll('.basemap-btn').forEach(btn => {
                 const btnType = btn.getAttribute('data-type');
                 if (btnType === type) {
-                    btn.className = btn.className.replace('text-slate-400 hover:text-slate-200', 'text-sky-400 bg-white/10');
-                    if (!btn.className.includes('text-sky-400')) {
-                        btn.className += ' text-sky-400 bg-white/10';
-                    }
+                    btn.className = btn.className
+                        .replace('text-slate-400 hover:text-slate-200 border-transparent', '')
+                        .trim() + ' text-sky-400 bg-sky-500/15 border-sky-400/30 font-semibold';
                 } else {
-                    btn.className = btn.className.replace('text-sky-400 bg-white/10', 'text-slate-400 hover:text-slate-200');
+                    btn.className = btn.className
+                        .replace('text-sky-400 bg-sky-500/15 border-sky-400/30 font-semibold', '')
+                        .trim() + ' text-slate-400 hover:text-slate-200 border-transparent font-medium';
                 }
             });
         }
 
-        function fitIndonesia() {
-            const currentZoom = window.innerWidth < 768 ? 4.2 : 5;
-            map.flyTo(defaultCenter, currentZoom, {
-                duration: 1.2
+        // 3. Reference Indonesian Cities Overlay
+        const referenceCities = [
+            { name: "Banda Aceh", coords: [5.5483, 95.3238] },
+            { name: "Medan", coords: [3.5952, 98.6722] },
+            { name: "Padang", coords: [-0.9471, 100.4172] },
+            { name: "Palembang", coords: [-2.9761, 104.7754] },
+            { name: "Jakarta", coords: [-6.2088, 106.8456] },
+            { name: "Bandung", coords: [-6.9175, 107.6191] },
+            { name: "Semarang", coords: [-6.9667, 110.4167] },
+            { name: "Surabaya", coords: [-7.2575, 112.7521] },
+            { name: "Denpasar", coords: [-8.6705, 115.2126] },
+            { name: "Kupang", coords: [-10.1772, 123.6070] },
+            { name: "Pontianak", coords: [-0.0263, 109.3425] },
+            { name: "Balikpapan", coords: [-1.2379, 116.8529] },
+            { name: "Makassar", coords: [-5.1477, 119.4327] },
+            { name: "Manado", coords: [1.4748, 124.8421] },
+            { name: "Ambon", coords: [-3.6954, 128.1814] },
+            { name: "Jayapura", coords: [-2.5337, 140.7181] }
+        ];
+
+        const cityLayerGroup = L.layerGroup();
+        let showCities = true;
+
+        referenceCities.forEach(city => {
+            const marker = L.circleMarker(city.coords, {
+                radius: 4,
+                fillColor: '#38bdf8',
+                color: '#0f172a',
+                weight: 1.5,
+                opacity: 0.9,
+                fillOpacity: 0.9
             });
+            marker.bindTooltip(city.name, {
+                permanent: false,
+                direction: 'top',
+                className: 'city-label-tooltip',
+                offset: [0, -4]
+            });
+            marker.addTo(cityLayerGroup);
+        });
+        cityLayerGroup.addTo(map);
+
+        function toggleCityMarkers() {
+            const btn = document.getElementById('btn-cities');
+            showCities = !showCities;
+            if (showCities) {
+                cityLayerGroup.addTo(map);
+                btn.classList.add('text-sky-400', 'border-sky-400/30');
+                btn.classList.remove('text-slate-400');
+            } else {
+                map.removeLayer(cityLayerGroup);
+                btn.classList.remove('text-sky-400', 'border-sky-400/30');
+                btn.classList.add('text-slate-400');
+            }
         }
 
-        // Mobile drawer toggle
+        // 4. Live Cursor Coordinate Tracker
+        const coordsDisplay = document.getElementById('cursor-coords');
+        map.on('mousemove', function(e) {
+            if (!coordsDisplay) return;
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            const latDir = lat >= 0 ? 'LU' : 'LS';
+            const lngDir = lng >= 0 ? 'BT' : 'BB';
+            coordsDisplay.innerText = `${Math.abs(lat).toFixed(2)}° ${latDir}, ${Math.abs(lng).toFixed(2)}° ${lngDir}`;
+        });
+
+        // 5. Quick Island Jump (FlyTo Regions)
+        const regions = {
+            indonesia: { center: [-2.5, 118.0], zoom: isMobileScreen ? 4.2 : 5 },
+            sumatera:  { center: [-0.5, 101.5], zoom: 6 },
+            jawa:      { center: [-7.2, 110.0], zoom: 7 },
+            kalimantan:{ center: [-1.0, 114.0], zoom: 6 },
+            sulawesi:  { center: [-2.0, 121.0], zoom: 6 },
+            balinusa:  { center: [-8.8, 119.5], zoom: 7 },
+            maluku:    { center: [-3.0, 128.0], zoom: 6 },
+            papua:     { center: [-4.2, 138.0], zoom: 6 }
+        };
+
+        function flyToRegion(key, btnEl) {
+            const target = regions[key];
+            if (!target) return;
+            map.flyTo(target.center, target.zoom, { duration: 1.25 });
+
+            document.querySelectorAll('.island-pill').forEach(el => {
+                el.classList.remove('active', 'text-sky-400', 'font-semibold');
+                el.classList.add('text-slate-300', 'font-medium');
+            });
+            if (btnEl && btnEl.classList.contains('island-pill')) {
+                btnEl.classList.add('active', 'text-sky-400', 'font-semibold');
+                btnEl.classList.remove('text-slate-300', 'font-medium');
+            }
+        }
+
+        function fitIndonesia() {
+            flyToRegion('indonesia', document.querySelector('.island-pill'));
+        }
+
+        // 6. Fullscreen Mode
+        function toggleFullscreen() {
+            const icon = document.getElementById('fullscreen-icon');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+                if (icon) icon.className = 'fa-solid fa-compress';
+            } else {
+                document.exitFullscreen().catch(() => {});
+                if (icon) icon.className = 'fa-solid fa-expand';
+            }
+        }
+
+        // 7. Mobile Drawer Toggle
         let isDrawerOpen = false;
         function toggleMobileDrawer() {
             const sheet = document.getElementById('mobile-bottom-sheet');
             const chevron = document.getElementById('drawer-chevron');
             const toggleText = document.getElementById('mobile-toggle-text');
             isDrawerOpen = !isDrawerOpen;
-            
+
             if (isDrawerOpen) {
                 sheet.classList.remove('collapsed');
                 if (chevron) chevron.style.transform = 'rotate(180deg)';
@@ -538,11 +902,13 @@
             }
         }
 
+        // 8. Thermal Layer Management, Opacity & Visual Filters
         let currentLayer = null;
         let activeFile = "";
         let currentOpacity = 0.8;
+        let isLayerVisible = true;
+        let currentFilter = 'normal';
 
-        // Synchronize Opacity Sliders (Desktop & Mobile)
         const opacitySliders = document.querySelectorAll('.opacity-slider-input');
         const opacityLabels = document.querySelectorAll('.opacity-val-indicator');
 
@@ -551,13 +917,76 @@
                 currentOpacity = parseFloat(e.target.value) / 100;
                 opacitySliders.forEach(s => s.value = e.target.value);
                 opacityLabels.forEach(l => l.innerText = `${e.target.value}%`);
-                if (currentLayer) {
+                if (currentLayer && isLayerVisible) {
                     currentLayer.setOpacity(currentOpacity);
                 }
             });
         });
 
+        function toggleLayerVisibility() {
+            const btn = document.getElementById('btn-layer-toggle');
+            isLayerVisible = !isLayerVisible;
+            if (currentLayer) {
+                currentLayer.setOpacity(isLayerVisible ? currentOpacity : 0);
+            }
+            if (btn) {
+                btn.innerHTML = isLayerVisible
+                    ? '<i class="fa-solid fa-eye"></i>'
+                    : '<i class="fa-solid fa-eye-slash text-slate-500"></i>';
+            }
+        }
+
+        function applyFilterToOverlay() {
+            if (!currentLayer || !currentLayer.getElement()) return;
+            const imgEl = currentLayer.getElement();
+            imgEl.classList.remove('overlay-sharp', 'overlay-soft');
+            if (currentFilter === 'sharp') imgEl.classList.add('overlay-sharp');
+            if (currentFilter === 'soft') imgEl.classList.add('overlay-soft');
+        }
+
+        function setOverlayFilter(mode) {
+            currentFilter = mode;
+            applyFilterToOverlay();
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.getAttribute('data-filter') === mode) {
+                    btn.className = 'filter-btn flex-1 py-1 text-[10px] font-semibold rounded-lg bg-sky-500/20 text-sky-300 border border-sky-400/30';
+                } else {
+                    btn.className = 'filter-btn flex-1 py-1 text-[10px] font-medium rounded-lg bg-slate-800/70 text-slate-400 hover:text-slate-200 border border-transparent';
+                }
+            });
+        }
+
+        // Helper for dynamic thermal badge styling
+        function updateThermalCategory(tempVal) {
+            const badges = document.querySelectorAll('.thermal-category-badge');
+            let label = 'Normal';
+            let classes = 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30';
+
+            if (tempVal < 24) {
+                label = 'Sejuk';
+                classes = 'bg-blue-500/20 text-blue-300 border-blue-400/30';
+            } else if (tempVal >= 24 && tempVal < 29) {
+                label = 'Hangat Normal';
+                classes = 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30';
+            } else if (tempVal >= 29 && tempVal < 32) {
+                label = 'Cukup Panas';
+                classes = 'bg-amber-500/20 text-amber-300 border-amber-400/30';
+            } else if (tempVal >= 32) {
+                label = 'Sangat Panas';
+                classes = 'bg-red-500/20 text-red-300 border-red-400/30';
+            }
+
+            badges.forEach(b => {
+                b.innerText = label;
+                b.className = `thermal-category-badge text-[10px] font-bold px-2 py-0.5 rounded-md border ${classes}`;
+            });
+        }
+
+        // 9. Data Fetching & 30s Countdown Timer
+        let countdownSeconds = 30;
+
         async function checkLatestData() {
+            countdownSeconds = 30;
             const refreshButtons = document.querySelectorAll('.btn-refresh-target');
             refreshButtons.forEach(btn => {
                 const icon = btn.querySelector('i');
@@ -565,28 +994,36 @@
             });
 
             try {
-                // Query param timestamp acak untuk mencegah browser cache
                 const res = await fetch(`public/latest.json?nocache=${new Date().getTime()}`);
                 if (!res.ok) {
                     throw new Error(`HTTP status ${res.status}`);
                 }
                 const data = await res.json();
 
-                // Format timestamp
+                // Update timestamp
                 if (data.timestamp_label) {
                     document.querySelectorAll('.time-label-indicator').forEach(el => {
                         el.innerHTML = `<i class="fa-solid fa-calendar-check text-xs text-emerald-400"></i> ${data.timestamp_label}`;
                     });
                 }
 
-                // Update average stats
+                // Update average temperature & dynamic category
                 if (data.stats && data.stats.avg_temp !== undefined) {
+                    const avgTemp = parseFloat(data.stats.avg_temp);
                     document.querySelectorAll('.stat-avg-indicator').forEach(el => {
-                        el.innerText = `${data.stats.avg_temp}°C`;
+                        el.innerText = `${data.stats.avg_temp} °C`;
                     });
+                    if (!isNaN(avgTemp)) {
+                        updateThermalCategory(avgTemp);
+                    }
                 }
 
-                // Cek apakah file layer berubah
+                // Update sync status
+                document.querySelectorAll('.sync-status-indicator').forEach(el => {
+                    el.innerText = 'TERHUBUNG';
+                });
+
+                // Only reload image overlay if file changed
                 if (data.layer_file && data.layer_file === activeFile) {
                     return;
                 }
@@ -597,24 +1034,24 @@
                     }
 
                     currentLayer = L.imageOverlay(data.layer_file, data.bounds, {
-                        opacity: currentOpacity,
+                        opacity: isLayerVisible ? currentOpacity : 0,
                         interactive: false
                     }).addTo(map);
 
+                    currentLayer.on('load', () => applyFilterToOverlay());
+                    applyFilterToOverlay();
+                    cityLayerGroup.bringToFront();
+
                     activeFile = data.layer_file;
                     const fileName = data.layer_file.split('/').pop();
-                    
+
                     document.querySelectorAll('.active-file-indicator').forEach(el => {
                         el.innerText = fileName;
                     });
                     document.querySelectorAll('.layer-status-indicator').forEach(el => {
-                        el.innerHTML = `<i class="fa-solid fa-circle-check"></i> Terpasang (${fileName})`;
+                        el.innerHTML = `<i class="fa-solid fa-circle-check"></i> Aktif (${fileName})`;
                     });
                 }
-
-                document.querySelectorAll('.sync-status-indicator').forEach(el => {
-                    el.innerText = 'TERHUBUNG';
-                });
 
             } catch (e) {
                 console.warn("Pemberitahuan fetching data:", e);
@@ -623,7 +1060,7 @@
                 });
                 if (!activeFile) {
                     document.querySelectorAll('.time-label-indicator').forEach(el => {
-                        el.innerHTML = `<span class="text-amber-400 text-xs font-sans font-normal"><i class="fa-solid fa-cloud-arrow-down"></i> Menunggu data terbaru GitHub Pages</span>`;
+                        el.innerHTML = `<span class="text-amber-400 text-xs font-sans font-medium"><i class="fa-solid fa-cloud-arrow-down mr-1"></i> Menunggu sinkronisasi public/latest.json</span>`;
                     });
                 }
             } finally {
@@ -640,8 +1077,22 @@
             checkLatestData();
         }
 
-        // Cek saat pertama kali dibuka & polling setiap 30 detik
+        // Countdown interval every 1s
+        setInterval(() => {
+            countdownSeconds = Math.max(0, countdownSeconds - 1);
+            document.querySelectorAll('.countdown-indicator').forEach(el => {
+                el.innerText = `${countdownSeconds}s`;
+            });
+            document.querySelectorAll('.countdown-bar').forEach(bar => {
+                bar.style.width = `${(countdownSeconds / 30) * 100}%`;
+            });
+            if (countdownSeconds === 0) {
+                checkLatestData();
+            }
+        }, 1000);
+
+        // Initial check
         checkLatestData();
-        setInterval(checkLatestData, 30000);
     </script>
-</body></html>
+</body>
+</html>
