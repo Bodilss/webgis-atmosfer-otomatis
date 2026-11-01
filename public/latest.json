@@ -1,8 +1,8 @@
 {
   "status": "success",
-  "timestamp_utc": "2026-11-01T02:09:15.431866+00:00",
-  "timestamp_label": "01 Nov 2026, 09:00 WIB",
-  "layer_file": "public/layers/suhu_20261101_0200.png",
+  "timestamp_utc": "2026-11-01T09:09:55.731074+00:00",
+  "timestamp_label": "01 Nov 2026, 16:00 WIB",
+  "layer_file": "public/layers/suhu_20261101_0900.png",
   "bounds": [
     [
       -11.0,
@@ -14,8 +14,8 @@
     ]
   ],
   "stats": {
-    "min_temp": 26.6,
-    "max_temp": 32.5,
-    "avg_temp": 29.6
+    "min_temp": 24.8,
+    "max_temp": 33.1,
+    "avg_temp": 28.0
   }
 }
